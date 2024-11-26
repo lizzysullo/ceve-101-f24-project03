@@ -1,13 +1,13 @@
 ---
 title: "CEVE 101: Project 03"
-author: "Your Name (your netid)" # CHANGE THIS
-date: "2024-10-23"
+author: "Lizzy Sullo (ls110)" # CHANGE THIS
+date: "2024-11-25"
 
 # do not change anything below this line
 engine: julia
 code-annotations: hover
-format:
-    html: default
+format: 
+    #html: default
     docx: default
 ---
 
@@ -26,7 +26,7 @@ using RainwaterHarvesting         # <2>
 Next, we specify the path to the rainfall data file and read it in.
 
 ```{julia}
-filepath = "data/1.txt" # <1>   
+filepath = "data/2.txt" # <1>   
 rainfall_data = RainfallData(filepath) # <2>
 ```
 
@@ -50,7 +50,7 @@ plot(rainfall_data) # <1>
 
 ### Discussion
 
-*Insert discussion here*
+The available data is sufficient for a somewhat meaningful risk assessments. Every year has data with mostly filled out data, as seen through the VS code dataset. Though there is some data missing, I believe each year has a sufficient amount of data to give a good analysis. Therefore, each year can be evaluated. However, some of the years tended have a little bit of less data, but not too much less. This lack of data leads me to understand why some of the years that had a drought aren't extremely recognizable of the graph. In general, the graph trends mostly follow the drought year, but there are some years that seem like they should be showing more of a drought. For example, there was a large drought in 1983, but it looks like less of a drought year than 1981 (which was a much less smaller drought year). This lack of data could be due to  instrument issues, human error, a power outage and many more things. An increased amount of missing data during drought years could be a result of the side effects of a drought (lack of personnel to run the data collection, power outage and facility inefficiency due to the drought). This inconsistency in the graph proves that you must look into the data that your graph is giving and the meaning behind it. You cannot follow results that don't account for these discrepencies. However, you can follow it to understand a general trend.  
 
 ## Understanding the Theoretical Model
 
@@ -58,59 +58,23 @@ Let's explore the model that simulates the rainwater harvesting system.
 
 ### Mass Balance Equation
 
-The mass balance model for the rainwater tank is given by:
+There are currently some assumtions in this theoretical model. One major assumption is that water is only consumed from the tank after 150 days as it is assumed they are able to get water during rainy season in the first 150 days. This, however, can lead to a many issues as it does not acocunt for the fact that there may be a drought or lack of water during the first 150 days. Even if they are getting some sort of rainwater, it is very unlikely that they are consistently getting enough to supply each household every day. Additionally, it is very possible. Another assumption is that each household consumes 74.1 liters. I know that in my household I believe we use much more than 74.1 liters of water. 
+I think it would be helpful to account for how many people are in the household when calculating the assumption. I would also add in a certain amount of days that have some use of the water tank during the rainy season.
+My new consumption would be modeled as 20x+20 for each day of the year greater than the 150th day (x is the number of people in the family and the additional 20 accounts for water that is jointly used by the family and more is not added). The second one would be and 74.1/7 for every day of the year before the 150th day (this is taking into account times that don't rain much in the rainy season which is assumed to be about 1/7th of the time).
 
-$$
-V_{t+1} = V_t + Q_t - C_t | 0 \leq V_t \leq V_\text{max}
-$$
-
-- $V_t$: the volume of water in the tank at time $t$
-- $Q_t$ is the volume of water added to the tank at time $t$
-- $C_t$ is the volume of water consumed at time $t$
-- $V_\text{max}$: the maximum volume of the tank
-
-### Inflow ($Q_t$)
-
-Inflow is calculated as
-
-$$
-Q_t = \eta \times A \times \max(P_t - F, 0).
-$$
-
-- $\eta$: the runoff coefficient, which accounts for losses due to evaporation, spilling, etc.
-- $A$: the area of the roof (we will use square meters)
-- $P_t$: the precipitation at time $t$ (we will use millimeters per day)
-- $F$: the first flush volume (we will use millimeters). The first flush volume is often discarded, so that each time it rains the first bit of water (which is usually dirty) is not used (see [here](https://rainwaterharvesting.tamu.edu/pre-storage-treatment/) for more details).
-
-### Consumption
-
-Consumption is modeled as:
-
-$$
-C_t = \begin{cases}
-    74.1 & \quad \text{day of year} > 150 \\
-    0 & \quad \text{day of year} \leq 150
-\end{cases}
-$$
-
-This makes two major assumptiuons.
-First, the household begins using water from the tank after the 150th day of the year.
-This is based on the idea that the rainy season lasts for about the first 150 days of the year, and so they may have other sources of water before then.
-The second assumption is that each household consumes 74.1 liters per day during the dry season.
-How does this compare to your household's water usage?
 
 ## Model Implementation and Testing
 
 ### Defining the Model Parameters
 
-We can define the model parameters with sensible default values.
-You will have the opportunity to change these values later.
+
+
 
 ```{julia}
 #| output: false
 param = ModelParameters(          # <1>
     runoff_coefficient=0.85,      # <2>
-    roof_area_m2=45.0,            # <3>
+    roof_area_m2=70.0,            # <3>
     first_flush_mm=2.0,           # <4>
     tank_capacity_L=16000.0       # <5>
 )
@@ -121,6 +85,8 @@ param = ModelParameters(          # <1>
 3. The roof area ($A$) is the area of the roof that the rain falls on.
 4. The first flush volume ($V_f$) is the volume of rain that is discarded because it is dirty.
 5. The tank capacity ($V_\text{max}$) is the maximum volume of the tank.
+
+I chose to modify the roof area to 70 m2. I did this because making this parameter higher led to less failures. Adjusting the volume of the tank did not help there be less failures even when I doubled the tank size. I chose to raise the roof area to 70 m2 because it was close to the lowest value that allowed there to be 0 failures. As I predicted, raising the roof area by this amount made it where the tank reached max volume later in the year (the original parameters made it reach max volume in March where the new parametersmade it reach max volume closer to June and the raise in tank volume was a little more gradual relative to the tank capacity). As expected, the daily rainfall did not change as these parameters could not effect this. 
 
 ### Running the Simulation for One Year
 
@@ -143,8 +109,7 @@ p2 = plot(rainfall_1981)
 plot(p2, p1, layout=(2, 1), size=(1000, 700), link=:x)
 ```
 
-Observe how the tank's water level responds to rainfall events.
-Note any periods when the tank runs dry or overflows.
+
 
 ### Reliability Analysis
 
@@ -162,3 +127,7 @@ println("Number of years with failures: ", sum(any_failures), " out of ", length
 2. We run the simulation for each year.
 3. We check if any failures occurred.
 4. We print the number of years with failures and the total number of years.
+
+
+As stated before, changing the area of the roof to 70 m2 made this system very reliable with no failures in 50 years. There is always going to be a small chance of failure, but this system has proven that this chance is very small. 
+One limitation with this model is that it doesn't account for the fact that it just runs the reliability analysis for a year one at a time and checks if the year has a failure. However, if you are calculating it over a year, there is definietly a chance that it could be dry/overflow in that year but not include that in the results because it averages out to not be a failure. For instance, the first 4 months of the year could have very little rainfall and the next 6 could have a lot of rain, making the results look like there was no dry period even though there was. This could be fixed by looking at the time frame on a smaller scale. Instead of looking at it once a year, one could look at it once a month to help make very unusual short amounts of time be more likely to be detected as a failure. 
